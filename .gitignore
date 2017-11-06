@@ -1,0 +1,10 @@
+#ignore file di testo
+*.txt
+*.csv
+*.dat
+#ignora acmant
+*.exe
+#ignora file .pdf
+*.pdf
+#ignora file .doc
+*.doc
