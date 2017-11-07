@@ -15,7 +15,7 @@ rm -rf *brk.txt
 
 parametro=${1}
 
-if [ ${parametro} != "tmax" -a ${parametro} != "tmin" ];then
+if [[ ${parametro} != "tmax" ]] && [[ ${parametro} != "tmin" ]];then
 	echo "Parametro ${parametro} non riconosciuto: usa tmax(tempratura massima)/tmin(temperatura minim)"
 	exit 1
 fi
