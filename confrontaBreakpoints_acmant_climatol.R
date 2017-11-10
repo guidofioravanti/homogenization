@@ -21,9 +21,16 @@ GAP_ANNI<-2
 GAP_ANNI_ESTREMI<-3
 
 #legge il file dei breakpoints di acmant e restituisce un df con i risultati per ciascuna serie (solo per le serie con 1 o più bp)
-reformatACMANT() %>%
-  mutate(Date=as.Date(Date)) %>%
-  rename(acmant_date=Date)->acmantBrk
+#Siccome il file di breakpèoint potrebbe già essere il risultato di reformatACMANT, prevediamo anche una lettura con read_delim
+tryCatch({
+  reformatACMANT("acmant.brk.txt") %>%
+    mutate(Date=as.Date(Date)) %>%
+    rename(acmant_date=Date)
+},error=function(e){
+  read_delim("acmant.brk.txt",delim=",",col_names = TRUE) %>%
+    mutate(Date=as.Date(Date)) %>%
+      rename(acmant_date=Date)    
+})->acmantBrk
 
 #cerca un file per Climatol.. se non lo trova il programma termina
 list.files(pattern = "^climatol.+csv$")->fileClimatol
@@ -33,7 +40,69 @@ read_delim(fileClimatol,delim=",",col_names = TRUE) %>%
   mutate(Date=as.Date(Date)) %>%
   rename(climatol_date=Date)->climatolBrk
 
-full_join(climatolBrk,acmantBrk,by=c("Code"="Code")) %>% mutate(gapYears=round(as.double((climatol_date-acmant_date)/365),2) )->listaBrk
+#filtra i breakpoint troppo vicini in Climatol:
+#1) se due breakpoint cadono nello stesso anno, prendiamo per quell'anno solo il breakpoint con SNHT maggiore
+climatolBrk %<>% mutate(anno=year(climatol_date)) 
+climatolBrk %>% 
+    group_by(Code,anno) %>%
+      summarise(massimo=max(SNHT))->filtrati
+
+left_join(filtrati,climatolBrk,by=c("Code"="Code","anno"="anno","massimo"="SNHT")) %>%
+  rename(SNHT=massimo)->climatolBrk_filtro1
+
+#2) Secondo filtro: due breakpoint troppo vicini equivalgono a un breakpoint
+purrr::map(unique(climatolBrk_filtro1$Code),.f=function(stazione){
+
+  climatolBrk_filtro1 %>% filter(Code==stazione)->subDati
+
+  subDati[order(subDati$anno),]->subDati
+  diff(subDati$anno)->diffanno
+  if(any(diffanno==0)) stop("Non è possibile: ho già eliminato i breakpoint nello stesso anno!")
+  #if(all(diffanno>2)) return(subDati)
+
+  subDati->tmp
+  
+  while(any(diffanno<=2)){
+
+      posizioni<-c()
+      daeliminare<-c()
+      
+      print(unique(subDati$Code))
+    
+      for(ii in 1:length(diffanno)){
+
+        if(diffanno[ii]>2){
+          
+          posizioni<-c(posizioni,c(ii+1,ii))
+        }else{
+  
+          c(ii,ii+1)[which.max(c(subDati$SNHT[ii],subDati$SNHT[ii+1]))]->ris
+          posizioni<-c(posizioni,ris)
+          if(ris==ii){
+            daeliminare<-c(daeliminare,ii+1)            
+          }else{
+            daeliminare<-c(daeliminare,ii)  
+          }
+         
+        }  
+        
+      }#fine ciclo for
+      
+
+      setdiff(posizioni,daeliminare)->posizioni
+      subDati[sort(unique(posizioni)),]->subDati
+      diff(subDati$anno)->diffanno
+
+  }
+  
+
+  subDati
+  
+    
+}) %>% reduce(rbind) %>% as.data.frame() -> climatolBrk_filtro2 #fine map
+
+
+full_join(climatolBrk_filtro2,acmantBrk,by=c("Code"="Code")) %>% mutate(gapYears=round(as.double((climatol_date-acmant_date)/365),2) )->listaBrk
   
 #calcoliamo la differenza (in termini di anni) tra il breakpoint trovato da ACMANT  e quello trovato da CLIMATOL:
 #il focus è sui breakpoint che distano in valore assoluto + o - GAP_ANNI

@@ -25,7 +25,7 @@ reformatACMANT<-function(fileBrk=NULL){
     
     read_lines(fileBrk)-> righe
     righe[!righe %in% ""]->righe
-    
+  
     #quali righe contengono i nomi
     grep(" +[A-Z][a-z]+_[0-9]+",righe)->posRigheNomi
     righe[posRigheNomi]->stazioni
