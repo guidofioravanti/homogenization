@@ -29,6 +29,10 @@ reformatACMANT<-function(fileBrk=NULL){
     #quali righe contengono i nomi
     grep(" +[A-Z][a-z]+_[0-9]+",righe)->posRigheNomi
     righe[posRigheNomi]->stazioni
+    
+    #eliminiamo le righe che corrispondono a serie per cui non è stato possibile fare l'omogeneizzazione ( - 1 )
+    #Necessario eliminarle perchè altrimenti fallisce il codice che segue.
+    stazioni[-grep(" -1 ",stazioni)]->stazioni
     #elimina la sequenza di spazi e produce una tabella (tabellaBrk) in cui sono riportati il nome della serie
     #il numero di breakpoints e il periodo in cui si è omogeneizzato. Sulla base di queste informazioni dobbiamo poi
     #cercare gli effettivi breakpoints.
@@ -47,7 +51,7 @@ reformatACMANT<-function(fileBrk=NULL){
     purrr::pmap(.l=list(tabellaBrk$Code,tabellaBrk$nCP,tabellaBrk$homo_period,tabellaBrk$period),.f=function(Code,nCP,homo_period,period){
       
       grep(paste0(" +",Code," +$") ,righe)->posizione
-      stopifnot(length(posizione)==1)
+      if(length(posizione)!=1) browser()
       
       #quanti breakpoints?
       if(nCP==0) return(NULL)
