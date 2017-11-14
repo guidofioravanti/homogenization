@@ -15,7 +15,7 @@ reformatACMANT<-function(fileBrk=NULL){
     if(is.null(fileBrk)){
       
       list.files(pattern=".+brk.txt")->fileBrk
-  
+
       if(length(fileBrk)!=1){
         if(!length(fileBrk)) stop("Non ho trovato nessun file brk.txt di ACMANT")
         stop("Ho trovato più file brk.txt di ACAMANT")
@@ -32,7 +32,8 @@ reformatACMANT<-function(fileBrk=NULL){
     
     #eliminiamo le righe che corrispondono a serie per cui non è stato possibile fare l'omogeneizzazione ( - 1 )
     #Necessario eliminarle perchè altrimenti fallisce il codice che segue.
-    stazioni[-grep(" -1 ",stazioni)]->stazioni
+    if(length(grep(" -1 ",stazioni))) stazioni[-grep(" -1 ",stazioni)]->stazioni
+    
     #elimina la sequenza di spazi e produce una tabella (tabellaBrk) in cui sono riportati il nome della serie
     #il numero di breakpoints e il periodo in cui si è omogeneizzato. Sulla base di queste informazioni dobbiamo poi
     #cercare gli effettivi breakpoints.
